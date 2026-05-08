@@ -14,3 +14,5 @@ Qr-код для перехода на сайт с игрой вы можете 
 Пасхалочка в игре есть))
 
 <img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/5091ef43-beaa-4653-8612-fce6afa5eb71" />
+От 4 лошка: да, было тяжело, но не для меня. Нас ебали как могли, но мы смогли.
+<img width="736" height="736" alt="image" src="https://github.com/user-attachments/assets/eb668ee1-d220-4dfb-8fb1-259d1b55de5a" />
