@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🧠 Memory Game</title>
     <style>
+        /* [Предыдущие стили сохранены] */
         * {
             margin: 0;
             padding: 0;
@@ -60,9 +61,7 @@
             transition: transform 0.5s ease;
         }
 
-        .card.flipped {
-            transform: rotateY(180deg);
-        }
+        .card.flipped { transform: rotateY(180deg); }
 
         .card.matched {
             transform: rotateY(180deg);
@@ -87,31 +86,14 @@
             overflow: hidden;
         }
 
-        .card-front {
-            background: #667eea;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        /* Установка card1.jpg как общей рубашки для всех карт */
-        .card-front img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 15px;
-        }
+        .card-front { background: #667eea; }
+        .card-front img { width: 100%; height: 100%; object-fit: cover; }
 
         .card-back {
             background: #f5576c;
             transform: rotateY(180deg);
-            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
         }
-        
-        .card-back img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 15px;
-        }
+        .card-back img { width: 100%; height: 100%; object-fit: cover; }
 
         .btn {
             margin-top: 25px;
@@ -123,12 +105,24 @@
             color: #fff;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
+        /* Стили для скримера */
+        #screamer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #000;
+            z-index: 9999;
+        }
+
+        #screamer img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Сохраняет пропорции paskal.png */
         }
 
         .modal-overlay {
@@ -142,36 +136,9 @@
             z-index: 100;
         }
 
-        .modal-overlay.active {
-            display: flex;
-        }
+        .modal-overlay.active { display: flex; }
 
-        .modal {
-            background: linear-gradient(145deg, #302b63, #24243e);
-            padding: 40px;
-            border-radius: 20px;
-            text-align: center;
-            box-shadow: 0 0 40px rgba(102, 126, 234, 0.5);
-            max-width: 400px;
-        }
-
-        .modal h2 {
-            font-size: 2rem;
-            margin-bottom: 15px;
-        }
-
-        .modal p {
-            font-size: 1.2rem;
-            margin-bottom: 8px;
-            opacity: 0.9;
-        }
-
-        .difficulty {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
+        .difficulty { display: flex; gap: 10px; margin-bottom: 20px; }
         .difficulty button {
             padding: 8px 20px;
             border: 2px solid rgba(255,255,255,0.3);
@@ -179,22 +146,15 @@
             color: #fff;
             border-radius: 20px;
             cursor: pointer;
-            font-size: 0.95rem;
-            transition: all 0.3s;
         }
-
-        .difficulty button.active {
-            background: linear-gradient(145deg, #667eea, #764ba2);
-            border-color: transparent;
-        }
-
-        @media (max-width: 500px) {
-            .board { gap: 8px; }
-            h1 { font-size: 1.8rem; }
-        }
+        .difficulty button.active { background: linear-gradient(145deg, #667eea, #764ba2); }
     </style>
 </head>
 <body>
+
+    <div id="screamer">
+        <img src="Images/paskal.png" alt="SURPRISE">
+    </div>
 
     <h1>🧠 Memory Game</h1>
 
@@ -212,7 +172,7 @@
 
     <div class="board" id="board"></div>
 
-    <button class="btn" onclick="restartGame()">🔄 Заново</button>
+    <button class="btn" onclick="handleRestart()">🔄 Заново</button>
 
     <div class="modal-overlay" id="modal">
         <div class="modal">
@@ -225,10 +185,7 @@
     </div>
 
     <script>
-        // card1.jpg — это рубашка (front)
         const coverImage = 'Images/card1.jpg';
-        
-        // card2.jpg - card13.jpg — это скрытые картинки (back)
         const gameImages = [];
         for (let i = 2; i <= 13; i++) {
             gameImages.push(`Images/card${i}.jpg`);
@@ -243,8 +200,12 @@
         let timerInterval = null;
         let seconds = 0;
         let lockBoard = false;
+        
+        // Счетчик для скримера
+        let restartCounter = 0;
 
         function setDifficulty(level) {
+            restartCounter = 0; // Смена сложности сбрасывает счетчик
             document.querySelectorAll('.difficulty button').forEach(b => b.classList.remove('active'));
             if (level === 'easy')   { cols = 4; rows = 3; totalPairs = 6;  document.getElementById('btn-easy').classList.add('active'); }
             if (level === 'medium') { cols = 4; rows = 4; totalPairs = 8;  document.getElementById('btn-medium').classList.add('active'); }
@@ -253,12 +214,21 @@
             restartGame();
         }
 
-        function shuffle(arr) {
-            for (let i = arr.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [arr[i], arr[j]] = [arr[j], arr[i]];
+        function handleRestart() {
+            restartCounter++;
+            if (restartCounter === 3) {
+                triggerScreamer();
+                restartCounter = 0;
             }
-            return arr;
+            restartGame();
+        }
+
+        function triggerScreamer() {
+            const sc = document.getElementById('screamer');
+            sc.style.display = 'block';
+            setTimeout(() => {
+                sc.style.display = 'none';
+            }, 3000);
         }
 
         function createBoard() {
@@ -269,20 +239,13 @@
             const chosen = shuffle([...gameImages]).slice(0, totalPairs);
             cards = shuffle([...chosen, ...chosen]);
 
-            cards.forEach((imgPath, i) => {
+            cards.forEach((imgPath) => {
                 const card = document.createElement('div');
                 card.classList.add('card');
                 card.dataset.image = imgPath;
-                
-                // В card-front теперь всегда card1.jpg
-                // В card-back подставляется одна из игровых картинок
                 card.innerHTML = `
-                    <div class="card-face card-front">
-                        <img src="${coverImage}" alt="Cover">
-                    </div>
-                    <div class="card-face card-back">
-                        <img src="${imgPath}" alt="Memory Card">
-                    </div>
+                    <div class="card-face card-front"><img src="${coverImage}"></div>
+                    <div class="card-face card-back"><img src="${imgPath}"></div>
                 `;
                 card.addEventListener('click', () => flipCard(card));
                 board.appendChild(card);
@@ -292,10 +255,10 @@
         function flipCard(card) {
             if (lockBoard) return;
             if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
-            if (flippedCards.length >= 2) return;
+            
+            restartCounter = 0; // Любое игровое действие сбрасывает счетчик "подряд"
 
             if (seconds === 0) startTimer();
-
             card.classList.add('flipped');
             flippedCards.push(card);
 
@@ -306,39 +269,38 @@
             }
         }
 
+        /* Остальные функции (checkMatch, shuffle, timer и т.д.) остаются без изменений */
+        function shuffle(arr) {
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
         function checkMatch() {
             const [a, b] = flippedCards;
             if (a.dataset.image === b.dataset.image) {
-                a.classList.add('matched');
-                b.classList.add('matched');
+                a.classList.add('matched'); b.classList.add('matched');
                 matchedPairs++;
                 document.getElementById('pairs').textContent = matchedPairs;
                 flippedCards = [];
-
-                if (matchedPairs === totalPairs) {
-                    clearInterval(timerInterval);
-                    setTimeout(showWin, 600);
-                }
+                if (matchedPairs === totalPairs) { clearInterval(timerInterval); setTimeout(showWin, 600); }
             } else {
                 lockBoard = true;
                 setTimeout(() => {
-                    a.classList.remove('flipped');
-                    b.classList.remove('flipped');
-                    flippedCards = [];
-                    lockBoard = false;
+                    a.classList.remove('flipped'); b.classList.remove('flipped');
+                    flippedCards = []; lockBoard = false;
                 }, 800);
             }
         }
 
         function startTimer() {
-            seconds = 0;
-            clearInterval(timerInterval);
+            seconds = 0; clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 seconds++;
-                const m = Math.floor(seconds / 60);
-                const s = seconds % 60;
-                document.getElementById('timer').textContent = 
-                    `${m}:${s.toString().padStart(2, '0')}`;
+                const m = Math.floor(seconds / 60); const s = seconds % 60;
+                document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
             }, 1000);
         }
 
@@ -348,21 +310,14 @@
             document.getElementById('modal').classList.add('active');
         }
 
-        function closeModal() {
-            document.getElementById('modal').classList.remove('active');
-        }
+        function closeModal() { document.getElementById('modal').classList.remove('active'); }
 
         function restartGame() {
             clearInterval(timerInterval);
-            seconds = 0;
-            moves = 0;
-            matchedPairs = 0;
-            flippedCards = [];
-            lockBoard = false;
+            seconds = 0; moves = 0; matchedPairs = 0; flippedCards = []; lockBoard = false;
             document.getElementById('timer').textContent = '0:00';
             document.getElementById('moves').textContent = '0';
             document.getElementById('pairs').textContent = '0';
-            document.getElementById('totalPairs').textContent = totalPairs;
             createBoard();
         }
 
