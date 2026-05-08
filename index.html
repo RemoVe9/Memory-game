@@ -84,7 +84,6 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.8rem;
         }
 
         .card-front {
@@ -104,6 +103,15 @@
             background: linear-gradient(145deg, #f093fb, #f5576c);
             transform: rotateY(180deg);
             box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+            overflow: hidden; /* Чтобы углы картинки не выходили за скругления */
+        }
+        
+        .card-back img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 15px;
+            display: block;
         }
 
         .btn {
@@ -210,7 +218,6 @@
 
     <button class="btn" onclick="restartGame()">🔄 Заново</button>
 
-    <!-- Win Modal -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
             <h2>🎉 Победа!</h2>
@@ -222,11 +229,11 @@
     </div>
 
     <script>
-        const emojis = [
-            '🍎','🍊','🍋','🍇','🍉','🍓','🫐','🍑',
-            '🥝','🍒','🌶️','🍄','🌻','🐱','🐶','🦊',
-            '🐸','🦋','🐢','🎸','🚀','⚡','🔥','💎'
-        ];
+        // Генерируем пути к 13 изображениям, как было запрошено
+        const imagePaths = [];
+        for (let i = 1; i <= 13; i++) {
+            imagePaths.push(`Images/card${i}.jpg`);
+        }
 
         let cols = 4, rows = 4;
         let totalPairs = 8;
@@ -260,17 +267,22 @@
             board.innerHTML = '';
             board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-            const chosen = shuffle([...emojis]).slice(0, totalPairs);
+            // Выбираем нужное количество пар из массива изображений
+            const chosen = shuffle([...imagePaths]).slice(0, totalPairs);
             cards = shuffle([...chosen, ...chosen]);
 
-            cards.forEach((emoji, i) => {
+            cards.forEach((imgPath, i) => {
                 const card = document.createElement('div');
                 card.classList.add('card');
-                card.dataset.emoji = emoji;
+                // Используем путь к изображению для проверки совпадений
+                card.dataset.image = imgPath;
                 card.dataset.index = i;
+                // Вставляем тег img вместо текстового эмодзи
                 card.innerHTML = `
                     <div class="card-face card-front"></div>
-                    <div class="card-face card-back">${emoji}</div>
+                    <div class="card-face card-back">
+                        <img src="${imgPath}" alt="Memory Card">
+                    </div>
                 `;
                 card.addEventListener('click', () => flipCard(card));
                 board.appendChild(card);
@@ -296,7 +308,8 @@
 
         function checkMatch() {
             const [a, b] = flippedCards;
-            if (a.dataset.emoji === b.dataset.emoji) {
+            // Проверяем совпадение по атрибуту dataset.image
+            if (a.dataset.image === b.dataset.image) {
                 a.classList.add('matched');
                 b.classList.add('matched');
                 matchedPairs++;
@@ -325,7 +338,7 @@
                 seconds++;
                 const m = Math.floor(seconds / 60);
                 const s = seconds % 60;
-                document.getElementById('timer').textContent =
+                document.getElementById('timer').textContent = 
                     `${m}:${s.toString().padStart(2, '0')}`;
             }, 1000);
         }
