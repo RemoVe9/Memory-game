@@ -84,26 +84,26 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
 
         .card-front {
-            background: linear-gradient(145deg, #667eea, #764ba2);
+            background: #667eea;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            font-size: 2rem;
         }
 
-        .card-front::after {
-            content: '?';
-            font-size: 2.5rem;
-            font-weight: bold;
-            opacity: 0.6;
+        /* Установка card1.jpg как общей рубашки для всех карт */
+        .card-front img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 15px;
         }
 
         .card-back {
-            background: linear-gradient(145deg, #f093fb, #f5576c);
+            background: #f5576c;
             transform: rotateY(180deg);
             box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-            overflow: hidden; /* Чтобы углы картинки не выходили за скругления */
         }
         
         .card-back img {
@@ -111,7 +111,6 @@
             height: 100%;
             object-fit: cover;
             border-radius: 15px;
-            display: block;
         }
 
         .btn {
@@ -132,7 +131,6 @@
             box-shadow: 0 6px 25px rgba(102, 126, 234, 0.6);
         }
 
-        /* Modal */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -168,7 +166,6 @@
             opacity: 0.9;
         }
 
-        /* Difficulty selector */
         .difficulty {
             display: flex;
             gap: 10px;
@@ -193,7 +190,6 @@
 
         @media (max-width: 500px) {
             .board { gap: 8px; }
-            .card-face { font-size: 2rem; border-radius: 10px; }
             h1 { font-size: 1.8rem; }
         }
     </style>
@@ -229,10 +225,13 @@
     </div>
 
     <script>
-        // Генерируем пути к 13 изображениям, как было запрошено
-        const imagePaths = [];
-        for (let i = 1; i <= 13; i++) {
-            imagePaths.push(`Images/card${i}.jpg`);
+        // card1.jpg — это рубашка (front)
+        const coverImage = 'Images/card1.jpg';
+        
+        // card2.jpg - card13.jpg — это скрытые картинки (back)
+        const gameImages = [];
+        for (let i = 2; i <= 13; i++) {
+            gameImages.push(`Images/card${i}.jpg`);
         }
 
         let cols = 4, rows = 4;
@@ -267,19 +266,20 @@
             board.innerHTML = '';
             board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
 
-            // Выбираем нужное количество пар из массива изображений
-            const chosen = shuffle([...imagePaths]).slice(0, totalPairs);
+            const chosen = shuffle([...gameImages]).slice(0, totalPairs);
             cards = shuffle([...chosen, ...chosen]);
 
             cards.forEach((imgPath, i) => {
                 const card = document.createElement('div');
                 card.classList.add('card');
-                // Используем путь к изображению для проверки совпадений
                 card.dataset.image = imgPath;
-                card.dataset.index = i;
-                // Вставляем тег img вместо текстового эмодзи
+                
+                // В card-front теперь всегда card1.jpg
+                // В card-back подставляется одна из игровых картинок
                 card.innerHTML = `
-                    <div class="card-face card-front"></div>
+                    <div class="card-face card-front">
+                        <img src="${coverImage}" alt="Cover">
+                    </div>
                     <div class="card-face card-back">
                         <img src="${imgPath}" alt="Memory Card">
                     </div>
@@ -308,7 +308,6 @@
 
         function checkMatch() {
             const [a, b] = flippedCards;
-            // Проверяем совпадение по атрибуту dataset.image
             if (a.dataset.image === b.dataset.image) {
                 a.classList.add('matched');
                 b.classList.add('matched');
@@ -367,7 +366,6 @@
             createBoard();
         }
 
-        // Init
         restartGame();
     </script>
 </body>
