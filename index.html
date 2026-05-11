@@ -67,7 +67,6 @@
 
         .card.flipped { transform: rotateY(180deg); }
 
-        /* ИСПРАВЛЕННАЯ АНИМАЦИЯ СОВПАДЕНИЯ */
         .card.matched {
             transform: rotateY(180deg);
             cursor: default;
@@ -75,7 +74,7 @@
         }
 
         .card.matched .card-back {
-            border: 3px solid #2ecc71; /* Яркая зеленая рамка */
+            border: 3px solid #2ecc71;
             box-shadow: 0 0 20px rgba(46, 204, 113, 0.5);
         }
 
@@ -114,6 +113,10 @@
             color: #fff; font-weight: bold; cursor: pointer; margin-top: 20px;
         }
 
+        .btn-lose {
+            background: linear-gradient(45deg, #ff4757, #ff6b81);
+        }
+
         .stats { margin-bottom: 15px; font-size: 1.1rem; display: flex; gap: 20px; }
 
         /* Скример */
@@ -138,6 +141,8 @@
         .modal-overlay.active { display: flex; }
         .modal { background: #1a1a1a; padding: 40px; border-radius: 25px; text-align: center; border: 1px solid #333; }
         .modal input { width: 100%; padding: 12px; margin: 20px 0; border-radius: 10px; border: none; outline: none; }
+        
+        .limit-warning { color: #ff4757; }
     </style>
 </head>
 <body>
@@ -154,25 +159,27 @@
     </div>
 
     <div class="difficulty">
-        <button onclick="changeDifficulty('easy', 4, 3, 6)" id="d-easy">4×3</button>
-        <button onclick="changeDifficulty('medium', 4, 4, 8)" id="d-medium" class="active">4×4</button>
-        <button onclick="changeDifficulty('hard', 6, 4, 12)" id="d-hard">6×4</button>
+        <!-- Параметры: ID, колонки, строки, пары, лимит ходов -->
+        <button onclick="changeDifficulty('easy', 4, 3, 6, 15)" id="d-easy">Легко (15 ходов)</button>
+        <button onclick="changeDifficulty('medium', 4, 4, 8, 25)" id="d-medium" class="active">Нормально (25 ходов)</button>
+        <button onclick="changeDifficulty('hard', 6, 4, 12, 40)" id="d-hard">Сложно (40 ходов)</button>
     </div>
 
     <div class="stats">
         <span>⏱ <b id="timer">0:00</b></span>
-        <span>🔄 Ходы: <b id="moves">0</b></span>
+        <span>🔄 Ходы: <b id="moves">0</b> / <b id="max-moves">25</b></span>
     </div>
 
     <div id="board" class="board"></div>
 
-    <button class="btn" onclick="handleRestartBtn()">🔄 ЗАНОГО</button>
+    <button class="btn" onclick="handleRestartBtn()">🔄 ЗАНОВО</button>
 
     <div class="leaderboard">
         <h3 style="text-align: center; margin-bottom: 15px;">🏆 Топ-5</h3>
         <div id="leaderboard-list"></div>
     </div>
 
+    <!-- Модальное окно победы -->
     <div class="modal-overlay" id="win-modal">
         <div class="modal">
             <h2>ПОБЕДА! 🎉</h2>
@@ -182,11 +189,20 @@
         </div>
     </div>
 
+    <!-- Модальное окно поражения -->
+    <div class="modal-overlay" id="lose-modal">
+        <div class="modal">
+            <h2 style="color: #ff4757; margin-bottom: 10px;">ИГРА ОКОНЧЕНА 💀</h2>
+            <p style="margin-bottom: 20px;">У вас закончились ходы!</p>
+            <button class="btn btn-lose" onclick="closeLoseModal()">ПОПРОБОВАТЬ СНОВА</button>
+        </div>
+    </div>
+
     <script>
         const cardShirt = 'Images/card1.jpg';
         const gameImages = Array.from({length: 12}, (_, i) => `Images/card${i + 2}.jpg`);
 
-        let gridX = 4, gridY = 4, pairsGoal = 8, diffKey = 'medium';
+        let gridX = 4, gridY = 4, pairsGoal = 8, diffKey = 'medium', maxMoves = 25;
         let flipped = [], matched = 0, moves = 0, seconds = 0, timerIdx = null;
         let isLocked = false, restartCount = 0;
 
@@ -201,7 +217,7 @@
                 const last = new Date(lastDate);
                 const diffDays = Math.floor((now - last) / (1000 * 60 * 60 * 24));
 
-                if (diffDays > 1) streak = 0; // Сброс если пропущен день
+                if (diffDays > 1) streak = 0; 
             }
 
             localStorage.setItem('streakCounter', streak);
@@ -229,6 +245,7 @@
             const board = document.getElementById('board');
             board.innerHTML = '';
             board.style.gridTemplateColumns = `repeat(${gridX}, 1fr)`;
+            document.getElementById('max-moves').innerText = maxMoves;
 
             const pool = shuffle([...gameImages]).slice(0, pairsGoal);
             const deck = shuffle([...pool, ...pool]);
@@ -258,26 +275,45 @@
             if (flipped.length === 2) {
                 moves++;
                 document.getElementById('moves').innerText = moves;
+                
+                // Подсвечиваем ходы красным, если осталось мало (опционально)
+                if (maxMoves - moves <= 3) {
+                    document.getElementById('moves').classList.add('limit-warning');
+                }
+
                 check();
             }
         }
 
         function check() {
             const [c1, c2] = flipped;
+            
+            // Если пара совпала
             if (c1.dataset.img === c2.dataset.img) {
-                // ИСПРАВЛЕНО: Карты остаются открытыми и пульсируют
                 c1.classList.replace('flipped', 'matched');
                 c2.classList.replace('flipped', 'matched');
                 matched++;
                 flipped = [];
-                if (matched === pairsGoal) finish();
-            } else {
+                
+                if (matched === pairsGoal) {
+                    finish();
+                } else if (moves >= maxMoves) {
+                    gameOver();
+                }
+            } 
+            // Если не совпала
+            else {
                 isLocked = true;
                 setTimeout(() => {
                     c1.classList.remove('flipped');
                     c2.classList.remove('flipped');
                     flipped = [];
                     isLocked = false;
+                    
+                    // Проверка окончания ходов после закрытия карточек
+                    if (moves >= maxMoves && matched !== pairsGoal) {
+                        gameOver();
+                    }
                 }, 800);
             }
         }
@@ -285,8 +321,21 @@
         function finish() {
             clearInterval(timerIdx);
             markWinToday();
-            document.getElementById('win-text').innerText = `Время: ${document.getElementById('timer').innerText} | Ходов: ${moves}`;
+            document.getElementById('win-text').innerText = `Время: ${document.getElementById('timer').innerText} | Ходов: ${moves} из ${maxMoves}`;
             document.getElementById('win-modal').classList.add('active');
+        }
+
+        function gameOver() {
+            clearInterval(timerIdx);
+            isLocked = true;
+            setTimeout(() => {
+                document.getElementById('lose-modal').classList.add('active');
+            }, 500); // Небольшая задержка перед модальным окном
+        }
+
+        function closeLoseModal() {
+            document.getElementById('lose-modal').classList.remove('active');
+            reset();
         }
 
         function saveResult() {
@@ -325,6 +374,7 @@
             seconds = 0; moves = 0; matched = 0; flipped = []; isLocked = false;
             document.getElementById('timer').innerText = '0:00';
             document.getElementById('moves').innerText = '0';
+            document.getElementById('moves').classList.remove('limit-warning');
             initGame();
         }
 
@@ -338,8 +388,9 @@
             reset();
         }
 
-        function changeDifficulty(d, x, y, p) {
-            diffKey = d; gridX = x; gridY = y; pairsGoal = p;
+        // В эту функцию добавлен параметр m (maxMoves)
+        function changeDifficulty(d, x, y, p, m) {
+            diffKey = d; gridX = x; gridY = y; pairsGoal = p; maxMoves = m;
             document.querySelectorAll('.difficulty button').forEach(b => b.classList.remove('active'));
             document.getElementById('d-' + d).classList.add('active');
             reset();
